@@ -1,0 +1,79 @@
+/* =============================================
+   OmniSign Mode Themes
+   ATM / Hospital / Video Call
+   ============================================= */
+
+/* ─── ATM Mode ─── */
+.mode-atm {
+  --accent-primary: #fdcb6e;
+  --accent-secondary: #e17055;
+  --accent-glow: rgba(253, 203, 110, 0.35);
+  --gradient-hero: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+}
+
+.mode-atm .glass-card {
+  border-width: 2px;
+}
+
+.mode-atm .btn {
+  font-size: 1.1rem;
+  padding: 18px 32px;
+  border-radius: var(--radius-xl);
+}
+
+.mode-atm .text-input-area input {
+  font-size: 1.2rem;
+  padding: 18px 24px;
+}
+
+.mode-atm .panel-title {
+  font-size: 1.2rem;
+}
+
+.mode-atm .text-output {
+  font-size: 1.2rem;
+}
+
+/* ─── Hospital Mode ─── */
+.mode-hospital {
+  --bg-primary: #05111a;
+  --bg-secondary: #0a1929;
+  --accent-primary: #74b9ff;
+  --accent-secondary: #55efc4;
+  --accent-warm: #81ecec;
+  --accent-glow: rgba(116, 185, 255, 0.3);
+  --gradient-hero: linear-gradient(135deg, #74b9ff 0%, #55efc4 100%);
+}
+
+.mode-hospital .btn-primary {
+  font-size: 1rem;
+  padding: 16px 28px;
+}
+
+/* ─── Video Call Mode ─── */
+.mode-videocall .main-grid {
+  grid-template-columns: 1fr 350px;
+}
+
+.mode-videocall .avatar-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 280px;
+  height: 320px;
+  z-index: 100;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+  border: 2px solid var(--border-glow);
+  aspect-ratio: auto;
+}
+
+@media (max-width: 768px) {
+  .mode-videocall .main-grid {
+    grid-template-columns: 1fr;
+  }
+  .mode-videocall .avatar-container {
+    width: 200px;
+    height: 240px;
+  }
+}

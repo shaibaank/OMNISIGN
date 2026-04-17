@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    networks: [omnisign_net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 3
+
+  agent1_gesture:
+    build: ./agent1_gesture
+    ports: ["8001:8001"]
+    networks: [omnisign_net]
+    volumes: ["./agent1_gesture/model:/app/model"]
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
+    env_file: .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      retries: 5
+
+  agent2_syntax:
+    build: ./agent2_syntax
+    ports: ["8002:8002"]
+    networks: [omnisign_net]
+    command: uvicorn main:app --host 0.0.0.0 --port 8002
+    env_file: .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      retries: 5
+
+  agent3_signer:
+    build: ./agent3_signer
+    ports: ["8003:8003"]
+    networks: [omnisign_net]
+    volumes: ["./agent3_signer/data:/app/data"]
+    command: uvicorn main:app --host 0.0.0.0 --port 8003
+    env_file: .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 10s
+      retries: 5
+
+  orchestrator:
+    build: ./orchestrator
+    ports: ["8000:8000"]
+    networks: [omnisign_net]
+    depends_on:
+      agent1_gesture: { condition: service_healthy }
+      agent2_syntax: { condition: service_healthy }
+      agent3_signer: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    env_file: .env
+
+  frontend:
+    build: ./frontend
+    ports: ["5173:5173"]
+    networks: [omnisign_net]
+    depends_on:
+      - orchestrator
+    command: sh -c "npm install && npm run dev -- --host"
+
+networks:
+  omnisign_net:
+    driver: bridge

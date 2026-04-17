@@ -1,0 +1,12 @@
+{
+  "HELLO": 0, "YES": 1, "NO": 2, "THANK_YOU": 3, "PLEASE": 4,
+  "HELP": 5, "NAME": 6, "WHAT": 7, "WHERE": 8, "WHEN": 9,
+  "WHO": 10, "HOW": 11, "I": 12, "YOU": 13, "WE": 14,
+  "THEY": 15, "WANT": 16, "NEED": 17, "LIKE": 18, "LOVE": 19,
+  "GOOD": 20, "BAD": 21, "BIG": 22, "SMALL": 23, "MORE": 24,
+  "STOP": 25, "GO": 26, "COME": 27, "EAT": 28, "DRINK": 29,
+  "WATER": 30, "FOOD": 31, "HOSPITAL": 32, "DOCTOR": 33, "MEDICINE": 34,
+  "PAIN": 35, "EMERGENCY": 36, "MONEY": 37, "HOME": 38, "WORK": 39,
+  "SCHOOL": 40, "FAMILY": 41, "FRIEND": 42, "PHONE": 43, "OK": 44,
+  "SORRY": 45, "HAPPY": 46, "SAD": 47, "WAIT": 48, "UNDERSTAND": 49
+}
