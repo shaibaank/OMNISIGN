@@ -8,38 +8,99 @@ import { matchSentence } from './gestureClassifier.js';
 
 // MediaPipe Holistic → readable word (hand gestures + body signs)
 const GLOSS_WORD = {
-  'Closed_Fist':    'Stop',
-  'Open_Palm':      'Hello',
-  'Pointing_Up':    'I / You',
-  'Thumb_Down':     'No',
-  'Thumb_Up':       'Yes',
-  'Victory':        'Peace',
-  'ILoveYou':       'I Love You',
-  'HAND_RAISED':    'Help!',
-  'BOTH_HANDS_UP':  'Emergency!',
-  'HAND_ON_CHEST':  'Me / Sorry',
+  'Closed_Fist': 'Stop',
+  'Open_Palm': 'Hello',
+  'Pointing_Up': 'I / You',
+  'Thumb_Down': 'No',
+  'Thumb_Up': 'Yes',
+  'Victory': 'Peace',
+  'ILoveYou': 'I Love You',
+  'HAND_RAISED': 'Help!',
+  'BOTH_HANDS_UP': 'Emergency!',
+  'HAND_ON_CHEST': 'Me / My',
+  'HAND_ON_HEAD': 'Understand',
+  'ARMS_CROSSED': 'Wait',
+  'HAND_ON_EAR': 'Listen',
+  'HAND_ON_MOUTH': 'Quiet',
+  'FACE_SMILE': 'Happy',
+  'FACE_SURPRISE': 'Wow',
+  'FACE_FROWN': 'Angry',
+
+  // Real ASL Compound Signs
+  'ASL_SORRY': 'Sorry',
+  'ASL_PLEASE': 'Please',
+  'ASL_THINK': 'Think',
+  'ASL_DEAF': 'Deaf',
+  'ASL_THANK_YOU': 'Thank You',
+  'ASL_LOVE': 'Love',
+  'ASL_SICK': 'Sick',
+  'ASL_SEE': 'See',
+  'ASL_EAT': 'Eat',
+  'ASL_DRINK': 'Drink',
+  'ASL_GOOD': 'Good',
+  'ASL_HELP': 'Help',
+  'ASL_DOCTOR': 'Doctor',
+  'ASL_WANT': 'Want',
+  'ASL_NAME': 'Name',
+  'ASL_WATER': 'Water',
+  'ASL_FINE': 'Fine',
+  'ASL_UNDERSTAND': 'Understand',
+  'ASL_WHERE': 'Where',
+  'ASL_BATHROOM': 'Bathroom',
+  'ASL_HOME': 'Home',
+  'ASL_FAMILY': 'Family',
+  'ASL_LIKE': 'Like',
+  'ASL_MONEY': 'Money',
+  'ASL_WORK': 'Work',
+  'ASL_SCHOOL': 'School',
+  'ASL_TIME': 'Time',
+  'ASL_PHONE': 'Phone',
+  'ASL_HEAR': 'Hear',
+  'ASL_SLEEP': 'Sleep',
+  'ASL_MORE': 'More',
+  'ASL_AGAIN': 'Again',
+
   'None': '', 'UNKNOWN': '',
 };
 
 const SENTENCE_TIMEOUT_MS = 4000;
 
 function textToGloss(text) {
-  const stop = new Set(['a','an','the','is','are','am','was','were','to','of','it','its']);
+  const stop = new Set(['a', 'an', 'the', 'is', 'are', 'am', 'was', 'were', 'to', 'of', 'it', 'its']);
   const words = text.toLowerCase().replace(/[?.!,]/g, '').split(/\s+/);
   return words.filter(w => !stop.has(w)).map(w => w.toUpperCase());
 }
 
 const GLOSS_CLIPS = {
-  'Open_Palm':      { clip_id: 'hello_wave',   duration_ms: 900,  nmm: { brow_raise: 0.4, smile: 0.6 } },
-  'Thumb_Up':       { clip_id: 'yes_nod',      duration_ms: 700,  nmm: { nod: 1.0, smile: 0.3 } },
-  'Thumb_Down':     { clip_id: 'no_shake',     duration_ms: 700,  nmm: { head_shake: 1.0 } },
-  'Pointing_Up':    { clip_id: 'you_point',    duration_ms: 400,  nmm: {} },
-  'ILoveYou':       { clip_id: 'love',         duration_ms: 1000, nmm: { smile: 0.9 } },
-  'Closed_Fist':    { clip_id: 'stop',         duration_ms: 600,  nmm: { brow_furrow: 0.4 } },
-  'Victory':        { clip_id: 'victory',      duration_ms: 700,  nmm: { smile: 0.6 } },
-  'HAND_RAISED':    { clip_id: 'help',         duration_ms: 900,  nmm: { brow_furrow: 0.5 } },
-  'BOTH_HANDS_UP':  { clip_id: 'emergency',    duration_ms: 1000, nmm: { brow_furrow: 0.8 } },
-  'HAND_ON_CHEST':  { clip_id: 'sorry',        duration_ms: 800,  nmm: { nod: 0.3 } },
+  'Open_Palm': { clip_id: 'hello_wave', duration_ms: 900, nmm: { brow_raise: 0.4, smile: 0.6 } },
+  'Thumb_Up': { clip_id: 'yes_nod', duration_ms: 700, nmm: { nod: 1.0, smile: 0.3 } },
+  'Thumb_Down': { clip_id: 'no_shake', duration_ms: 700, nmm: { head_shake: 1.0 } },
+  'Pointing_Up': { clip_id: 'you_point', duration_ms: 400, nmm: {} },
+  'ILoveYou': { clip_id: 'love', duration_ms: 1000, nmm: { smile: 0.9 } },
+  'Closed_Fist': { clip_id: 'stop', duration_ms: 600, nmm: { brow_furrow: 0.4 } },
+  'Victory': { clip_id: 'victory', duration_ms: 700, nmm: { smile: 0.6 } },
+  'HAND_RAISED': { clip_id: 'help', duration_ms: 900, nmm: { brow_furrow: 0.5 } },
+  'BOTH_HANDS_UP': { clip_id: 'emergency', duration_ms: 1000, nmm: { brow_furrow: 0.8 } },
+  'HAND_ON_CHEST': { clip_id: 'me', duration_ms: 600, nmm: {} },
+  'HAND_ON_HEAD': { clip_id: 'understand', duration_ms: 800, nmm: { nod: 0.5, smile: 0.3 } },
+  'ARMS_CROSSED': { clip_id: 'wait', duration_ms: 800, nmm: {} },
+  'HAND_ON_EAR': { clip_id: 'listen', duration_ms: 600, nmm: {} },
+  'HAND_ON_MOUTH': { clip_id: 'quiet', duration_ms: 600, nmm: {} },
+  'FACE_SMILE': { clip_id: 'happy', duration_ms: 800, nmm: { smile: 0.8 } },
+  'FACE_SURPRISE': { clip_id: 'wow', duration_ms: 800, nmm: { brow_raise: 0.8, mouth_open: 0.5 } },
+  'FACE_FROWN': { clip_id: 'angry', duration_ms: 800, nmm: { brow_furrow: 0.8 } },
+
+  'ASL_SORRY': { clip_id: 'sorry', duration_ms: 800, nmm: { brow_furrow: 0.4 } },
+  'ASL_PLEASE': { clip_id: 'please', duration_ms: 800, nmm: { smile: 0.4 } },
+  'ASL_THINK': { clip_id: 'think', duration_ms: 600, nmm: {} },
+  'ASL_DEAF': { clip_id: 'deaf', duration_ms: 700, nmm: {} },
+  'ASL_THANK_YOU': { clip_id: 'thank_you', duration_ms: 800, nmm: { smile: 0.6, nod: 0.4 } },
+  'ASL_LOVE': { clip_id: 'love', duration_ms: 1000, nmm: { smile: 0.9 } },
+  'ASL_SICK': { clip_id: 'sick', duration_ms: 900, nmm: { brow_furrow: 0.6 } },
+
+  'J': { clip_id: 'letter_j', duration_ms: 600, nmm: {} },
+  'Z': { clip_id: 'letter_z', duration_ms: 800, nmm: {} },
+  'WAVE_HELLO': { clip_id: 'hello_wave', duration_ms: 1000, nmm: { smile: 0.8, brow_raise: 0.3 } },
 };
 
 const FALLBACK_CLIP = { clip_id: 'generic', duration_ms: 600, nmm: {} };
@@ -180,7 +241,7 @@ export default function App() {
         });
         return;
       }
-    } catch {}
+    } catch { }
     setBackendOnline(false);
     setAgentStatus({ orchestrator: 'offline', agent1: 'offline', agent2: 'offline', agent3: 'offline' });
   }

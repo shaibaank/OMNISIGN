@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { GestureStateMachine, detectBodySign, detectFaceNMM } from '../gestureClassifier.js';
+import { GestureStateMachine, DynamicGestureDetector, detectBodySign, detectFaceNMM, detectFaceSign } from '../gestureClassifier.js';
+import { analyzeHandShape, detectASLSign } from '../handShapeAnalyzer.js';
+import { ASL_GESTURES } from '../aslGestures.js';
+import * as fp from 'fingerpose';
 
 /**
  * Holistic GestureCapture — MediaPipe GestureRecognizer + PoseLandmarker + FaceLandmarker
@@ -8,13 +11,13 @@ import { GestureStateMachine, detectBodySign, detectFaceNMM } from '../gestureCl
 
 // Pose skeleton connections
 const POSE_CONN = [
-  [11,12],[11,13],[13,15],[12,14],[14,16], // arms
-  [11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28], // torso+legs
-  [27,29],[28,30],[29,31],[30,32], // feet
+  [11, 12], [11, 13], [13, 15], [12, 14], [14, 16], // arms
+  [11, 23], [12, 24], [23, 24], [23, 25], [24, 26], [25, 27], [26, 28], // torso+legs
+  [27, 29], [28, 30], [29, 31], [30, 32], // feet
 ];
 
 // Face oval landmark indices (simplified)
-const FACE_OVAL = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
+const FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
 
 export default function GestureCapture({ onLandmarks, onGestureDetected, sessionId, isActive }) {
   const videoRef = useRef(null);
@@ -24,6 +27,10 @@ export default function GestureCapture({ onLandmarks, onGestureDetected, session
   const faceRef = useRef(null);
   const animRef = useRef(null);
   const stateRef = useRef(new GestureStateMachine({ confirmFrames: 4, cooldownMs: 2000, bufferSize: 7, lostFrames: 8, minConfidence: 0.65 }));
+  const dynDetRef = useRef(new DynamicGestureDetector());
+  const fpEstimatorRef = useRef(new fp.GestureEstimator(ASL_GESTURES));
+  const lastPose = useRef(null);
+  const lastFace = useRef(null);
   const frameIdx = useRef(0);
 
   const [cameraReady, setCameraReady] = useState(false);
@@ -38,6 +45,14 @@ export default function GestureCapture({ onLandmarks, onGestureDetected, session
   const lastFps = useRef(Date.now());
 
   useEffect(() => {
+    // Expose for custom gesture recording
+    window.recordCustomGesture = (label) => {
+      if (window.__lastHandLandmarks && label) {
+        dynDetRef.current.addCustomGesture(label.toUpperCase(), window.__lastHandLandmarks);
+        alert(`Custom gesture "${label.toUpperCase()}" saved!`);
+      } else { alert('No hand detected. Show your hand to the camera first.'); }
+    };
+
     let cancelled = false;
     let stream = null;
 
@@ -106,14 +121,24 @@ export default function GestureCapture({ onLandmarks, onGestureDetected, session
           gestureResult = gestureRecRef.current.recognizeForVideo(video, ts);
         }
 
-        // ── Pose (every 2nd frame) ──
-        if (poseRef.current && frameIdx.current % 2 === 0) {
-          try { poseResult = poseRef.current.detectForVideo(video, ts); } catch {}
+        // ── Pose (every frame — needed for compound ASL signs) ──
+        if (poseRef.current) {
+          try {
+            const pr = poseRef.current.detectForVideo(video, ts);
+            if (pr?.landmarks?.[0]) { poseResult = pr; lastPose.current = pr; }
+            else { poseResult = lastPose.current; }
+          } catch { poseResult = lastPose.current; }
         }
 
-        // ── Face (every 3rd frame) ──
-        if (faceRef.current && frameIdx.current % 3 === 0) {
-          try { faceResult = faceRef.current.detectForVideo(video, ts); } catch {}
+        // ── Face (every 2nd frame, cache last) ──
+        if (faceRef.current && frameIdx.current % 2 === 0) {
+          try {
+            const fr = faceRef.current.detectForVideo(video, ts);
+            if (fr?.faceLandmarks?.[0]) { faceResult = fr; lastFace.current = fr; }
+            else { faceResult = lastFace.current; }
+          } catch { faceResult = lastFace.current; }
+        } else {
+          faceResult = lastFace.current;
         }
 
         // ── Draw Pose Skeleton ──
@@ -175,7 +200,7 @@ export default function GestureCapture({ onLandmarks, onGestureDetected, session
             const color = hi === 0 ? 'rgba(108, 92, 231, 0.7)' : 'rgba(253, 121, 168, 0.7)';
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
-            [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]].forEach(([a, b]) => {
+            [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]].forEach(([a, b]) => {
               ctx.beginPath();
               ctx.moveTo(hand[a].x * W, hand[a].y * H);
               ctx.lineTo(hand[b].x * W, hand[b].y * H);
@@ -190,18 +215,58 @@ export default function GestureCapture({ onLandmarks, onGestureDetected, session
           });
         }
 
+        // Store landmarks for custom gesture recording
+        if (hasHands) { window.__lastHandLandmarks = gestureResult.landmarks[0]; }
+
         // ── Classify ──
         let gestureName = gestureResult?.gestures?.[0]?.[0]?.categoryName || 'None';
         let confidence = gestureResult?.gestures?.[0]?.[0]?.score || 0;
 
-        // Body-pose augmentation
-        if (poseResult?.landmarks?.[0] && (gestureName === 'None' || confidence < 0.5)) {
-          const bodySig = detectBodySign(poseResult.landmarks[0]);
+        // Fingerpose ASL Gestures
+        if (hasHands && fpEstimatorRef.current) {
+          // Convert MediaPipe landmarks to fingerpose format [x, y, z]
+          const fpLandmarks = gestureResult.landmarks[0].map(pt => [pt.x, pt.y, pt.z]);
+          const fpEst = fpEstimatorRef.current.estimate(fpLandmarks, 8.0);
+          if (fpEst.gestures.length > 0) {
+            const best = fpEst.gestures.reduce((p, c) => (p.score > c.score ? p : c));
+            const fpConf = best.score / 10;
+            if (fpConf > confidence) {
+              gestureName = best.name;
+              confidence = fpConf;
+            }
+          }
+        }
+
+        // Dynamic gesture detection (wave, J, Z, custom)
+        if (hasHands) {
+          const dynSig = dynDetRef.current.detect(gestureResult.landmarks[0]);
+          if (dynSig) { gestureName = dynSig.name; confidence = dynSig.confidence; }
+        }
+
+        // Hand shape analysis (raw landmark geometry for signs beyond built-in 7)
+        if (hasHands && poseResult?.landmarks?.[0]) {
+          const shape = analyzeHandShape(gestureResult.landmarks[0]);
+          if (shape) {
+            const aslSig = detectASLSign(shape, poseResult.landmarks[0], gestureResult.landmarks[0]);
+            if (aslSig && aslSig.confidence > confidence) {
+              gestureName = aslSig.name; confidence = aslSig.confidence;
+            }
+          }
+        }
+
+        // Compound ASL signs (hand shape + body location)
+        if (poseResult?.landmarks?.[0]) {
+          const bodySig = detectBodySign(poseResult.landmarks[0], gestureName, confidence);
           if (bodySig) { gestureName = bodySig.name; confidence = bodySig.confidence; }
         }
 
-        // Face NMM (for display only)
+        // Face Sign augmentation — also always check
         if (faceResult?.faceBlendshapes) {
+          // Only use face sign if no strong hand/body result
+          if (gestureName === 'None' || confidence < 0.5) {
+            const faceSig = detectFaceSign(faceResult.faceBlendshapes);
+            if (faceSig) { gestureName = faceSig.name; confidence = faceSig.confidence; }
+          }
           detectFaceNMM(faceResult.faceBlendshapes);
         }
 

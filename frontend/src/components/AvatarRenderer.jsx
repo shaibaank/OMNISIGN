@@ -81,6 +81,7 @@ export default function AvatarRenderer({ clipQueue, isPlaying }) {
 
     // Build procedural avatar
     const avatarGroup = buildProceduralAvatar();
+    avatarGroup.rotation.y = Math.PI; // Face the user's perspective (mirror mode)
     scene.add(avatarGroup);
     avatarGroupRef.current = avatarGroup;
 
